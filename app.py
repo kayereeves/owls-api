@@ -1,3 +1,8 @@
+#based on
+#https://www.bogotobogo.com/python/python-REST-API-Http-Requests-for-Humans-with-Flask.php
+#https://www.nintyzeros.com/2019/11/flask-mysql-crud-restful-api.html
+
+import json
 from flask import Flask, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
@@ -7,7 +12,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://owls:vHAxYRzjZYSEr6E@ow
 db = SQLAlchemy(app)
 
 ###Models####
-class Owls(db.Model):
+class Transaction(db.Model):
     __tablename__ = "transactions"
     loaded_at = db.Column(db.Date)
     transaction_id = db.Column(db.String(255), primary_key=True)
@@ -21,6 +26,7 @@ class Owls(db.Model):
       db.session.add(self)
       db.session.commit()
       return self
+
     def __init__(self,loaded_at,transaction_id,user_id,traded,traded_for,ds,notes):
         self.loaded_at = loaded_at
         self.transaction_id = transaction_id
@@ -29,12 +35,15 @@ class Owls(db.Model):
         self.traded_for = traded_for
         self.ds = ds
         self.notes = notes
+
     def __repr__(self):
         return '' % self
+
 db.create_all()
-class OwlsSchema(SQLAlchemyAutoSchema):
+
+class TransactionSchema(SQLAlchemyAutoSchema):
     class Meta(SQLAlchemyAutoSchema.Meta):
-        model = Owls
+        model = Transaction
         sqla_session = db.session
     loaded_at = fields.String(required=False)
     transaction_id = fields.String(dump_only=True)
@@ -46,45 +55,41 @@ class OwlsSchema(SQLAlchemyAutoSchema):
 
 @app.route('/transactions', methods = ['GET'])
 def index():
-    get_transactions = Owls.query.all()
-    transaction_schema = OwlsSchema(many=True)
+    get_transactions = Transaction.query.all()
+    transaction_schema = TransactionSchema(many=True)
     transaction = transaction_schema.dump(get_transactions)
     return make_response(jsonify({"transaction": transaction}))
-#@app.route('/transactions/<id>', methods = ['GET'])
-#def get_product_by_id(ds):
-    #get_transactions = Owls.query.get(ds)
-    #transaction_schema = OwlsSchema()
-    #transactions = transaction_schema.dump(get_transactions)
-    #return make_response(jsonify({"transaction": transactions}))
-#@app.route('/transactions/<id>', methods = ['PUT'])
-#def update_product_by_id(id):
-    #data = request.get_json()
-    #get_product = Owls.query.get(id)
-    #if data.get('title'):
-        #get_product.title = data['title']
-    #if data.get('productDescription'):
-        #get_product.productDescription = data['productDescription']
-    #if data.get('productBrand'):
-        #get_product.productBrand = data['productBrand']
-    #if data.get('price'):
-        #get_product.price= data['price']    
-    #db.session.add(get_product)
-    #db.session.commit()
-    #product_schema = OwlsSchema(only=['id', 'title', 'productDescription','productBrand','price'])
-    #product = product_schema.dump(get_product)
-    #return make_response(jsonify({"product": product}))
-#@app.route('/products/<id>', methods = ['DELETE'])
-#def delete_product_by_id(id):
-    #get_product = Owls.query.get(id)
-    #db.session.delete(get_product)
-    #db.session.commit()
-    #return make_response("",204)
-#@app.route('/products', methods = ['POST'])
-#def create_product():
-    #data = request.get_json()
-    #product_schema = OwlsSchema()
-    #product = product_schema.load(data)
-    #result = product_schema.dump(product.create())
-    #return make_response(jsonify({"product": result}),200)
+
+#return results by user id
+#will likely be disabled to prevent abuse
+@app.route('/transactions/user/<string:user>', methods = ['GET'])
+def get_by_user(user):
+    user = user.casefold()
+    get_transactions = Transaction.query.all()
+    transaction_schema = TransactionSchema(many=True)
+    transaction = transaction_schema.dump(get_transactions)
+    resultList = []
+
+    for i,q in enumerate(transaction):
+        if q['user_id'].casefold() == user:
+            resultList.append(transaction[i])
+
+    return make_response(jsonify({"transaction": resultList}))
+
+#return results for trades containing an item name
+@app.route('/transactions/item/<string:item>', methods = ['GET'])
+def get_by_item(item):
+    item = item.casefold()
+    get_transactions = Transaction.query.all()
+    transaction_schema = TransactionSchema(many=True)
+    transaction = transaction_schema.dump(get_transactions)
+    resultList = []
+
+    for i,q in enumerate(transaction):
+        if item in q['traded'].casefold() or item in q['traded_for'].casefold():
+            resultList.append(transaction[i])
+
+    return make_response(jsonify({"transaction": resultList}))
+    
 if __name__ == "__main__":
     app.run(debug=True)
