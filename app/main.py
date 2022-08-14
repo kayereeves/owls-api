@@ -96,7 +96,7 @@ class ItemDataSchema(SQLAlchemyAutoSchema):
     owls_value = fields.String(required=False)
     date_of_last_update = fields.String(required=False)
 
-@app.route('/transactions', methods = ['GET'])
+#@app.route('/transactions', methods = ['GET'])
 def index():
     get_transactions = Transaction.query.all()
     transaction_schema = TransactionSchema(many=True)
@@ -105,7 +105,7 @@ def index():
 
 #return results by user id
 #will likely be disabled to prevent abuse
-@app.route('/transactions/user/<string:user>', methods = ['GET'])
+#@app.route('/transactions/user/<string:user>', methods = ['GET'])
 def get_by_user(user):
     user = user.casefold()
     get_transactions = Transaction.query.all()
@@ -120,7 +120,7 @@ def get_by_user(user):
     return make_response(jsonify({"transaction": resultList}))
 
 #return results for trades containing an item name
-@app.route('/transactions/item/<string:item>', methods = ['GET'])
+#@app.route('/transactions/item/<string:item>', methods = ['GET'])
 def get_by_item(item):
     item = item.casefold()
     get_transactions = Transaction.query.all()
@@ -134,14 +134,14 @@ def get_by_item(item):
 
     return make_response(jsonify({"transaction": resultList}))
 
-@app.route('/itemdata', methods = ['GET'])
+#@app.route('/itemdata', methods = ['GET'])
 def itemdata_index():
     get_itemdata = ItemData.query.all()
     itemdata_schema = ItemDataSchema(many=True)
     itemdata = itemdata_schema.dump(get_itemdata)
     return make_response(jsonify({"itemdata": itemdata}))
 
-@app.route('/itemdata/owlsvalue/<string:item>', methods = ['GET'])
+#@app.route('/itemdata/owlsvalue/<string:item>', methods = ['GET'])
 def get_owls_value(item):
     item = item.casefold()
     get_itemdata = ItemData.query.all()
