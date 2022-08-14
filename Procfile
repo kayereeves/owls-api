@@ -1,1 +1,1 @@
-web: gunicorn neo-owls.wsgi
+web: gunicorn wsgi:app
