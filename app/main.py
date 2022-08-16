@@ -45,7 +45,7 @@ class Transaction(db.Model):
 
 class ItemData(db.Model):
     __tablename__ = "itemdata"
-    name = db.Column('Item', db.String(70), primary_key=True)
+    name = db.Column('Item', db.String(70))
     retirement = db.Column('retirement date', db.String(10))
     release_type = db.Column('cap, LT buyable or RR', db.String(10))
     num_reports = db.Column('# of reports', db.String(10))
@@ -53,13 +53,14 @@ class ItemData(db.Model):
     old_reports = db.Column('old reports', db.String(500))
     owls_value = db.Column('last Owls value', db.String(100))
     date_of_last_update = db.Column('last updated', db.String(20))
+    api_name = db.Column('API name', db.String(70), primary_key=True)
 
     def create(self):
       db.session.add(self)
       db.session.commit()
       return self
 
-    def __init__(self,name,retirement,release_type,num_reports,values_reported,old_reports,owls_value,date_of_last_update):
+    def __init__(self,name,retirement,release_type,num_reports,values_reported,old_reports,owls_value,date_of_last_update,api_name):
         self.name = name
         self.retirement = retirement
         self.release_type = release_type
@@ -68,6 +69,7 @@ class ItemData(db.Model):
         self.old_reports = old_reports
         self.owls_value = owls_value
         self.date_of_last_update = date_of_last_update
+        self.api_name = api_name
 
     def __repr__(self):
         return '' % self
@@ -90,7 +92,7 @@ class ItemDataSchema(SQLAlchemyAutoSchema):
     class Meta(SQLAlchemyAutoSchema.Meta):
         model = ItemData
         sqla_session = db.session
-    name = fields.String(required=True, primary_key=True)
+    name = fields.String(required=True)
     retirement = fields.String(required=False)
     release_type = fields.String(required=False)
     num_reports = fields.String(required=False)
@@ -98,6 +100,7 @@ class ItemDataSchema(SQLAlchemyAutoSchema):
     old_reports = fields.String(required=False)
     owls_value = fields.String(required=False)
     date_of_last_update = fields.String(required=False)
+    api_name = fields.String(required=True, primary_key=True)
 
 #@app.route('/transactions', methods = ['GET'])
 def index():
@@ -161,7 +164,7 @@ def owls_script():
     value_list = []
 
     for data in itemdata:
-        name_list.append(data['name'])
+        name_list.append(data['api_name'])
         value_list.append(data['owls_value'])
 
     result = dict(zip(name_list, value_list))
