@@ -3,16 +3,19 @@
 #https://www.nintyzeros.com/2019/11/flask-mysql-crud-restful-api.html
 
 import json
+import re
 import pandas as pd
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, make_response, current_app
 from flask_sqlalchemy import SQLAlchemy
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from marshmallow import fields
 from flask_cors import CORS
+from datetime import datetime
 
 app = Flask(__name__)
 CORS(app)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://owls:vHAxYRzjZYSEr6E@owls-db.c9hvuhvpnktp.us-west-2.rds.amazonaws.com/owls'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 ###Models####
@@ -31,17 +34,14 @@ class Transaction(db.Model):
       db.session.commit()
       return self
 
-    def __init__(self,loaded_at,transaction_id,user_id,traded,traded_for,ds,notes):
+    def __init__(self,loaded_at,user_id,traded,traded_for,ds,notes):
         self.loaded_at = loaded_at
-        self.transaction_id = transaction_id
+        self.transaction_id = "new"
         self.user_id = user_id
         self.traded = traded
         self.traded_for = traded_for
         self.ds = ds
         self.notes = notes
-
-    def __repr__(self):
-        return '' % self
 
 class ItemData(db.Model):
     __tablename__ = "itemdata"
@@ -71,17 +71,16 @@ class ItemData(db.Model):
         self.date_of_last_update = date_of_last_update
         self.api_name = api_name
 
-    def __repr__(self):
-        return '' % self
-
 db.create_all()
 
 class TransactionSchema(SQLAlchemyAutoSchema):
     class Meta(SQLAlchemyAutoSchema.Meta):
         model = Transaction
         sqla_session = db.session
+        include_relationships = True
+        load_instance = True
     loaded_at = fields.String(required=False)
-    transaction_id = fields.String(dump_only=True)
+    transaction_id = fields.String(dump_only=True, required=False)
     user_id = fields.String(required=False)
     traded = fields.String(required=True)
     traded_for = fields.String(required=True)
@@ -100,61 +99,77 @@ class ItemDataSchema(SQLAlchemyAutoSchema):
     old_reports = fields.String(required=False)
     owls_value = fields.String(required=False)
     date_of_last_update = fields.String(required=False)
-    api_name = fields.String(required=True, primary_key=True)
+    api_name = fields.String(required=True)
 
-#@app.route('/transactions', methods = ['GET'])
+@app.route('/', methods = ['GET'])
 def index():
-    get_transactions = Transaction.query.all()
-    transaction_schema = TransactionSchema(many=True)
-    transaction = transaction_schema.dump(get_transactions)
-    return make_response(jsonify({"transaction": transaction}))
+    return current_app.send_static_file('index.html')
 
-#return results by user id
-#will likely be disabled to prevent abuse
-#@app.route('/transactions/user/<string:user>', methods = ['GET'])
-def get_by_user(user):
-    user = user.casefold()
-    get_transactions = Transaction.query.all()
-    transaction_schema = TransactionSchema(many=True)
-    transaction = transaction_schema.dump(get_transactions)
-    resultList = []
+#submit a trade to the db
+@app.route('/transactions/submit', methods = ['GET','POST'])
+def submit_trade():
+    data = request.get_json()
+    transaction_schema = TransactionSchema()
+    transaction = transaction_schema.load(data)
+    t = Transaction.create(transaction)
+    result = transaction_schema.dump(t)
 
-    for i,q in enumerate(transaction):
-        if q['user_id'].casefold() == user:
-            resultList.append(transaction[i])
+    return make_response(jsonify({"transaction": result}),200)
 
-    return make_response(jsonify({"transaction": resultList}))
-
-#return results for trades containing an item name
-#@app.route('/transactions/item/<string:item>', methods = ['GET'])
+#return results for trades containing an item
+#user_id is deliberately omitted from result
+@app.route('/transactions/<string:item>', methods = ['GET'])
 def get_by_item(item):
+    start = request.args.get('start', default='1900-01-01', type=str)
+    end = request.args.get('end', default='2100-01-01', type=str)
     item = item.casefold()
+
     get_transactions = Transaction.query.all()
     transaction_schema = TransactionSchema(many=True)
     transaction = transaction_schema.dump(get_transactions)
     resultList = []
 
     for i,q in enumerate(transaction):
-        if item in q['traded'].casefold() or item in q['traded_for'].casefold():
-            resultList.append(transaction[i])
+        transaction_str = ''
 
-    return make_response(jsonify({"transaction": resultList}))
+        if item in q['traded'].casefold():
+            transaction_str = q['traded'].casefold()
 
-#@app.route('/itemdata', methods = ['GET'])
-def itemdata_index():
-    get_itemdata = ItemData.query.all()
-    itemdata_schema = ItemDataSchema(many=True)
-    itemdata = itemdata_schema.dump(get_itemdata)
-    return make_response(jsonify({"itemdata": itemdata}))
+        elif item in q['traded_for'].casefold():
+            transaction_str = q['traded_for'].casefold()
 
-#@app.route('/itemdata/owlsvalue/<string:item>', methods = ['GET'])
+        if re.search("Dyeworks .*: ".casefold() + item, transaction_str):
+            pass
+        elif transaction_str == '':
+            pass
+        else:
+            if (transaction[i]['ds'] == '0000-00-00'):
+                transac_date = datetime.strptime(start, '%Y-%m-%d')
+            else:
+                transac_date = datetime.strptime(transaction[i]['ds'], '%Y-%m-%d')
+            
+            start_date = datetime.strptime(start, '%Y-%m-%d')
+            end_date = datetime.strptime(end, '%Y-%m-%d')
+
+            if transac_date >= start_date and transac_date <= end_date:
+                del transaction[i]['user_id'] 
+                del transaction[i]['transaction_id']
+                del transaction[i]['loaded_at']
+                resultList.append(transaction[i])
+
+    return make_response(jsonify({"results": resultList}))
+
+#retrieve owls guide value for an item by name
+@app.route('/itemdata/<string:item>', methods = ['GET'])
 def get_owls_value(item):
     item = item.casefold()
-    get_itemdata = ItemData.query.all()
-    itemdata_schema = ItemDataSchema(many=True)
+    get_itemdata = ItemData.query.get(item)
+    itemdata_schema = ItemDataSchema()
     itemdata = itemdata_schema.dump(get_itemdata)
-    return make_response(jsonify({"owls value": itemdata}))
 
+    return make_response(jsonify({"owls_value": itemdata['owls_value'], "last_updated": itemdata['date_of_last_update']}))
+
+#retrieve item name and value pairs in format expected by the owls userscript
 @app.route('/itemdata/owls_script/', methods = ['GET'])
 def owls_script():
     get_itemdata = ItemData.query.all()
