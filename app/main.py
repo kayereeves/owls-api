@@ -5,7 +5,7 @@
 import json
 import re
 import pandas as pd
-from flask import Flask, request, jsonify, make_response, current_app
+from flask import Flask, request, jsonify, make_response, current_app, abort
 from flask_sqlalchemy import SQLAlchemy
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
 from marshmallow import fields
@@ -164,10 +164,14 @@ def get_by_item(item):
 def get_owls_value(item):
     item = item.casefold()
     get_itemdata = ItemData.query.get(item)
-    itemdata_schema = ItemDataSchema()
-    itemdata = itemdata_schema.dump(get_itemdata)
+    
+    if (get_itemdata):
+        itemdata_schema = ItemDataSchema()
+        itemdata = itemdata_schema.dump(get_itemdata)
 
-    return make_response(jsonify({"owls_value": itemdata['owls_value'], "last_updated": itemdata['date_of_last_update']}))
+        return make_response(jsonify({"owls_value": itemdata['owls_value'], "last_updated": itemdata['date_of_last_update']}))
+    else:
+        abort(404)
 
 #retrieve item name and value pairs in format expected by the owls userscript
 @app.route('/itemdata/owls_script/', methods = ['GET'])
