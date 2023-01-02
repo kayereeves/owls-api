@@ -5,6 +5,7 @@
 import json
 import re
 import pandas as pd
+import dateutil
 from flask import Flask, request, jsonify, make_response, current_app, abort
 from flask_sqlalchemy import SQLAlchemy
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
@@ -19,7 +20,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
 
 ###Models####
-class Transaction(db.Model):
+class _Transaction(db.Model):
     __tablename__ = "transactions"
     loaded_at = db.Column(db.Date)
     transaction_id = db.Column(db.String(255), primary_key=True)
@@ -43,7 +44,7 @@ class Transaction(db.Model):
         self.ds = ds
         self.notes = notes
 
-class ItemData(db.Model):
+class _ItemData(db.Model):
     __tablename__ = "itemdata"
     name = db.Column('Item', db.String(70))
     retirement = db.Column('retirement date', db.String(10))
@@ -71,11 +72,23 @@ class ItemData(db.Model):
         self.date_of_last_update = date_of_last_update
         self.api_name = api_name
 
+class _Terms(db.Model):
+    __tablename__ = "terms_users"
+    user_id = db.Column(db.String(255), primary_key=True)
+
+    def create(self):
+        db.session.add(self)
+        db.session.commit()
+        return self
+
+    def __init__(self, user_id):
+        self.user_id = user_id
+
 db.create_all()
 
-class TransactionSchema(SQLAlchemyAutoSchema):
-    class Meta(SQLAlchemyAutoSchema.Meta):
-        model = Transaction
+class _TransactionSchema(SQLAlchemyAutoSchema):
+    class _Meta(SQLAlchemyAutoSchema.Meta):
+        model = _Transaction
         sqla_session = db.session
         include_relationships = True
         load_instance = True
@@ -87,9 +100,9 @@ class TransactionSchema(SQLAlchemyAutoSchema):
     ds = fields.String(required=False)
     notes = fields.String(required=False)
 
-class ItemDataSchema(SQLAlchemyAutoSchema):
-    class Meta(SQLAlchemyAutoSchema.Meta):
-        model = ItemData
+class _ItemDataSchema(SQLAlchemyAutoSchema):
+    class _Meta(SQLAlchemyAutoSchema.Meta):
+        model = _ItemData
         sqla_session = db.session
     name = fields.String(required=True)
     retirement = fields.String(required=False)
@@ -101,22 +114,40 @@ class ItemDataSchema(SQLAlchemyAutoSchema):
     date_of_last_update = fields.String(required=False)
     api_name = fields.String(required=True)
 
-@app.route('/', methods = ['GET'])
-def index():
-    return current_app.send_static_file('index.html')
+class _TermsSchema(SQLAlchemyAutoSchema):
+    class _Meta(SQLAlchemyAutoSchema.Meta):
+        model = _Terms
+        sqla_session = db.session
+        include_relationships = True
+        load_instance = True
+    user_id = fields.String(required=False)
 
-#submit a trade to the db
+@app.route('/', methods = ['GET'])
+def _index():
+    return current_app.send_static_file('static/app/main.html')
+
+"""
+Submit a trade to the database.
+
+Accepts a trade in the format {"loaded_at": "", "user_id": "", "traded": "", "traded_for": "", "ds": "", "notes": ""}
+
+/transactions/submit
+"""
 @app.route('/transactions/submit', methods = ['GET','POST'])
 def submit_trade():
     data = request.get_json()
-    transaction_schema = TransactionSchema()
+    transaction_schema = _TransactionSchema()
     transaction = transaction_schema.load(data)
-    t = Transaction.create(transaction)
+    t = _Transaction.create(transaction)
     result = transaction_schema.dump(t)
 
     return make_response(jsonify({"transaction": result}),200)
 
-#return results for trades containing an item
+"""
+Return data for trades containing an item by name.
+
+/transactions/<string:item>
+"""
 #user_id is deliberately omitted from result
 @app.route('/transactions/<string:item>', methods = ['GET'])
 def get_by_item(item):
@@ -124,8 +155,8 @@ def get_by_item(item):
     end = request.args.get('end', default='2100-01-01', type=str)
     item = item.casefold()
 
-    get_transactions = Transaction.query.all()
-    transaction_schema = TransactionSchema(many=True)
+    get_transactions = _Transaction.query.all()
+    transaction_schema = _TransactionSchema(many=True)
     transaction = transaction_schema.dump(get_transactions)
     resultList = []
 
@@ -159,25 +190,33 @@ def get_by_item(item):
 
     return make_response(jsonify({"results": resultList}))
 
-#retrieve owls guide value for an item by name
+"""
+Retrieve ~Owls guide value for an item by name.
+
+/itemdata/<string:item>
+"""
 @app.route('/itemdata/<string:item>', methods = ['GET'])
 def get_owls_value(item):
     item = item.casefold()
-    get_itemdata = ItemData.query.get(item)
+    get_itemdata = _ItemData.query.get(item)
     
     if (get_itemdata):
-        itemdata_schema = ItemDataSchema()
+        itemdata_schema = _ItemDataSchema()
         itemdata = itemdata_schema.dump(get_itemdata)
 
         return make_response(jsonify({"owls_value": itemdata['owls_value'], "last_updated": itemdata['date_of_last_update']}))
     else:
         abort(404)
 
-#retrieve item name and value pairs in format expected by the owls userscript
+"""
+Retrieve all item name and value pairs in format expected by the ~Owls userscript.
+
+/itemdata/owls_script
+"""
 @app.route('/itemdata/owls_script/', methods = ['GET'])
 def owls_script():
-    get_itemdata = ItemData.query.all()
-    itemdata_schema = ItemDataSchema(many=True)
+    get_itemdata = _ItemData.query.all()
+    itemdata_schema = _ItemDataSchema(many=True)
     itemdata = itemdata_schema.dump(get_itemdata)
     name_list = []
     value_list = []
@@ -189,3 +228,17 @@ def owls_script():
     result = dict(zip(name_list, value_list))
 
     return make_response(jsonify(result))
+
+"""
+Checks if a user has read the T&C.
+
+/terms/<string:user>
+"""
+@app.route('/terms/<string:user>', methods = ['GET'])
+def terms_check(user):
+    get_user = _Terms.query.get(user)
+    
+    if not (get_user):
+        abort(404)
+
+    return user
