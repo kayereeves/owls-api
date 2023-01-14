@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<style>
+body {
+    counter-reset: tradeCount;
+}
+.innerForm {
+
+}
+.innerform::before {
+    counter-increment: tradeCount;
+}
+</style>
+</head>
+<body>
+
+<div id="top"></div>
+<h1>Owls Admin Form</h1>
+<input id="subAllButton" type="button" value="Submit All" onclick="submitAll()"/>
+<input id="goToBottomButton" type="button" value="Go To Bottom" onclick='window.location.href="#bottom"'/>
+<input id="plus" type="button" value="+"/>
+<br>
+<br>
+<br>
+<div id = "subform">
+<div class = "innerform">
+Trade Data <input id="x" type="button" value="x" onclick="remForm()"/>
+<form action="/action_page.php" method="post">
+    U: <input type="text" name="username" required><br>
+    S: <input type="text" name="sent" required><br>
+    R: <input type="text" name="received" required><br>
+    N: <input type="text" name="notes"><br>
+    D: <input type="date" name="date" required>
+    <input id="subButton" type="button" value="Submit" onclick="submit()"/>
+    <input id="plus" type="button" value="+"/>
+</form>
+<br>
+<br>
+</div>
+</div>
+<input id="subAllButton" type="button" value="Submit All" onclick="submitAll()"/>
+<input id="goToTopButton" type="button" value="Go To Top" onclick='window.location.href="#top"'/>
+<input id="plus" type="button" value="+"/>
+<div id="bottom"></div>
+<br>
+
+<script>
+function submit() {
+
+}
+function addForm() {
+    var frm = document.createElement("innerform");
+    frm.classList.add('innerform')
+    frm.innerHTML += '<br>'
+    frm.innerHTML += 'Trade Data <input id="x" type="button" value="x" onclick="remForm()"/><br>'
+    frm.innerHTML += '<form action="/action_page.php" method="post">'
+    frm.innerHTML += 'U: <input type="text" name="username" required><br>'
+    frm.innerHTML += 'S: <input type="text" name="sent" required><br>'
+    frm.innerHTML += 'R: <input type="text" name="received" required><br>'
+    frm.innerHTML += 'N: <input type="text" name="notes"><br>'
+    frm.innerHTML += 'D: <input type="date" name="date" required>'
+    frm.innerHTML += ' <input id="subButton" type="button" value="Submit" onclick="submit()"/>'
+    frm.innerHTML += ' <input id="plus" type="button" value="+" onclick="addForm()"/>'
+    frm.innerHTML += '</form><br>'
+
+    //document.getElementById("subform").appendChild(frm)
+    return frm
+}
+function remForm(node) {
+    const outer = document.getElementById("subform");
+    const inner = document.getElementsByClassName("innerform")
+    //inner[2].remove();
+}
+</script>
+
+<script>
+$(document).ready(function() {
+    document.onmousedown = mouseDown;
+    function mouseDown(e) {
+        var element =  document.elementFromPoint(e.clientX,e.clientY);
+        console.log("Clicked element is:" + element.tagName);
+        console.log(element.parentElement.tagName)
+        console.log("Index: " + $(element).index());
+        if (element.id == "x") {
+            element.parentElement.remove();
+        }
+        else if (element.id == "plus") {
+            var frm = addForm();
+            element.parentNode.parentNode.insertBefore(frm, element.parentNode.nextSibling);
+        }
+
+    }
+});
+</script>
+
+</body>
+</html>

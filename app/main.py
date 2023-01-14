@@ -6,6 +6,7 @@ import json
 import re
 import pandas as pd
 import dateutil
+import hashlib
 from flask import Flask, request, jsonify, make_response, current_app, abort
 from flask_sqlalchemy import SQLAlchemy
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
@@ -84,6 +85,13 @@ class _Terms(db.Model):
     def __init__(self, user_id):
         self.user_id = user_id
 
+class _UserData(db.Model):
+    __tablename__ = "userdata"
+    username = db.Column(db.String(20), primary_key=True)
+    hash = db.Column(db.String(20))
+    email = db.Column(db.String(50))
+    isAdmin = db.Column(db.Boolean)
+
 db.create_all()
 
 class _TransactionSchema(SQLAlchemyAutoSchema):
@@ -121,6 +129,17 @@ class _TermsSchema(SQLAlchemyAutoSchema):
         include_relationships = True
         load_instance = True
     user_id = fields.String(required=False)
+
+class _UserDataSchema(SQLAlchemyAutoSchema):
+    class _Meta(SQLAlchemyAutoSchema.Meta):
+        model = _UserData
+        sqla_session = db.session
+        include_relationships = True
+        load_instance = True
+    username = fields.String(required=True)
+    hash = fields.String(required=True)
+    email = fields.String(required=True)
+    isAdmin = fields.Boolean(required=True)
 
 @app.route('/', methods = ['GET'])
 def _index():
@@ -242,3 +261,24 @@ def terms_check(user):
         abort(404)
 
     return user
+
+"""
+Adds a user to the list of users who have read the T&C.
+
+/terms/add/<string:user>
+"""
+@app.route('/terms/add/<string:user>', methods = ['GET', 'POST'])
+def terms_add(user):
+    data = _Terms(user)
+    db.session.add(data)
+    db.session.commit()
+
+    return user
+
+#@app.route('/validate_name/<string:user>', methods = ['GET'])
+#def add_user(user):
+    #get_user =
+
+#adds a new user to the database
+#@app.route('/add_user/<string:user>', methods = ['GET', 'POST'])
+#def add_user(user):
