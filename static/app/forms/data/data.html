@@ -1,13 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dosis:wght@800&family=Raleway&display=swap" rel="stylesheet">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
 <style>
 body {
-    counter-reset: tradeCount;
+    text-align: center;
+    font-family: 'Raleway';
+}
+.subform {
+    display:block;
+}
+input {
+    
+}
+button {
+
+}
+.dummy {
+    visibility: hidden;
 }
 .innerForm {
-
+    margin: auto;
+    display:inline-block;
 }
 .innerform::before {
     counter-increment: tradeCount;
@@ -17,61 +34,89 @@ body {
 <body>
 
 <div id="top"></div>
-<h1>Owls Admin Form</h1>
-<input id="subAllButton" type="button" value="Submit All" onclick="submitAll()"/>
-<input id="goToBottomButton" type="button" value="Go To Bottom" onclick='window.location.href="#bottom"'/>
-<input id="plus" type="button" value="+"/>
+<h1>🦉 Owls Admin Data Form 🦉</h1>U = user or Discord tag, S = sent, R = received, N = notes<br><br>
+🦉<input id="subAllButton" type="button" value="Submit All" onclick="submit()"/>
+<input id="goToBottomButton" type="button" value="Go To Bottom" onclick='window.location.href="#bottom"'/>🦉
 <br>
 <br>
-<br>
-<div id = "subform">
-<div class = "innerform">
-Trade Data <input id="x" type="button" value="x" onclick="remForm()"/>
+<div class = "subform" id = "subform">
+<div class = "innerform" id = "initialform">
 <form action="/action_page.php" method="post">
     U: <input type="text" name="username" required><br>
     S: <input type="text" name="sent" required><br>
     R: <input type="text" name="received" required><br>
     N: <input type="text" name="notes"><br>
     D: <input type="date" name="date" required>
-    <input id="subButton" type="button" value="Submit" onclick="submit()"/>
+    <input id="x" class="dummy" type="button" value="x"/> 
     <input id="plus" type="button" value="+"/>
 </form>
 <br>
 <br>
 </div>
 </div>
-<input id="subAllButton" type="button" value="Submit All" onclick="submitAll()"/>
-<input id="goToTopButton" type="button" value="Go To Top" onclick='window.location.href="#top"'/>
-<input id="plus" type="button" value="+"/>
+🦉<input id="subAllButton" type="button" value="Submit All" onclick="submit()"/>
+<input id="goToTopButton" type="button" value="Go To Top" onclick='window.location.href="#top"'/>🦉
 <div id="bottom"></div>
 <br>
 
 <script>
 function submit() {
+    var length = document.forms.length;
+    var frms = document.getElementsByClassName("innerform").length
 
+    for (var i = 0; i < length; i++) {
+        let xhr = new XMLHttpRequest();
+        xhr.open("POST", "https://neo-owls.herokuapp.com/transactions/submit");
+        xhr.setRequestHeader('Content-type', 'application/json');
+        var frm = document.forms[i];
+        `console.log('')
+        console.log(frm.username.value);
+        console.log(frm.sent.value);
+        console.log(frm.received.value);
+        console.log(frm.notes.value);
+        console.log(frm.notes.date);`
+
+        var data = {
+            loaded_at: frm.date.value,
+            user_id: frm.username.value,
+            traded: frm.sent.value,
+            traded_for: frm.received.value,
+            ds: frm.date.value,
+            notes: frm.notes.value
+        };
+
+        wdata = JSON.stringify(data);
+
+        console.log(wdata);
+
+        xhr.send(wdata);
+
+    }
 }
 function addForm() {
     var frm = document.createElement("innerform");
     frm.classList.add('innerform')
-    frm.innerHTML += '<br>'
-    frm.innerHTML += 'Trade Data <input id="x" type="button" value="x" onclick="remForm()"/><br>'
-    frm.innerHTML += '<form action="/action_page.php" method="post">'
-    frm.innerHTML += 'U: <input type="text" name="username" required><br>'
-    frm.innerHTML += 'S: <input type="text" name="sent" required><br>'
-    frm.innerHTML += 'R: <input type="text" name="received" required><br>'
-    frm.innerHTML += 'N: <input type="text" name="notes"><br>'
-    frm.innerHTML += 'D: <input type="date" name="date" required>'
-    frm.innerHTML += ' <input id="subButton" type="button" value="Submit" onclick="submit()"/>'
-    frm.innerHTML += ' <input id="plus" type="button" value="+" onclick="addForm()"/>'
-    frm.innerHTML += '</form><br>'
+
+    var htmlstr = ''
+    htmlstr += '<form action="/action_page.php" method="post"><br>'
+    htmlstr += 'U: <input type="text" name="username" required><br>'
+    htmlstr += 'S: <input type="text" name="sent" required><br>'
+    htmlstr += 'R: <input type="text" name="received" required><br>'
+    htmlstr += 'N: <input type="text" name="notes"><br>'
+    htmlstr += 'D: <input type="date" name="date" required> '
+    htmlstr += '<input id="x" type="button" value="x"/> '
+    htmlstr += '<input id="plus" type="button" value="+" onclick="addForm()"/>'
+    htmlstr += '</form>'
+
+    frm.innerHTML += htmlstr
+    //console.log(frm.username.value)
 
     //document.getElementById("subform").appendChild(frm)
     return frm
 }
-function remForm(node) {
-    const outer = document.getElementById("subform");
-    const inner = document.getElementsByClassName("innerform")
-    //inner[2].remove();
+function countForms() {
+    const forms = document.getElementsByClassName("innerform")
+    return forms.length
 }
 </script>
 
@@ -80,9 +125,9 @@ $(document).ready(function() {
     document.onmousedown = mouseDown;
     function mouseDown(e) {
         var element =  document.elementFromPoint(e.clientX,e.clientY);
-        console.log("Clicked element is:" + element.tagName);
-        console.log(element.parentElement.tagName)
-        console.log("Index: " + $(element).index());
+        //console.log("Clicked element is:" + element.tagName);
+        //console.log(element.parentElement.tagName)
+        //console.log("Index: " + $(element).index());
         if (element.id == "x") {
             element.parentElement.remove();
         }
@@ -90,7 +135,6 @@ $(document).ready(function() {
             var frm = addForm();
             element.parentNode.parentNode.insertBefore(frm, element.parentNode.nextSibling);
         }
-
     }
 });
 </script>

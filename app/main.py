@@ -9,7 +9,7 @@ import dateutil
 import hashlib
 from flask import Flask, request, jsonify, make_response, current_app, abort
 from flask_sqlalchemy import SQLAlchemy
-from marshmallow_sqlalchemy import SQLAlchemyAutoSchema
+from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 from marshmallow import fields
 from flask_cors import CORS
 from datetime import datetime
@@ -155,10 +155,16 @@ Accepts a trade in the format {"loaded_at": "", "user_id": "", "traded": "", "tr
 @app.route('/transactions/submit', methods = ['GET','POST'])
 def submit_trade():
     data = request.get_json()
-    transaction_schema = _TransactionSchema()
-    transaction = transaction_schema.load(data)
-    t = _Transaction.create(transaction)
-    result = transaction_schema.dump(t)
+    #print(data)
+    #transaction_schema = _TransactionSchema()
+    #transaction = transaction_schema.loads(data)
+    #t = _Transaction.create(transaction)
+    t = _Transaction(loaded_at=data['loaded_at'], user_id=data['user_id'], traded=data['traded'], traded_for=data['traded_for'],
+    ds=data['ds'], notes=data['notes'])
+    db.session.add(t)
+    db.session.commit()
+    #result = transaction_schema.dump(t)
+    result = data
 
     return make_response(jsonify({"transaction": result}),200)
 

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dosis:wght@800&family=Raleway&display=swap" rel="stylesheet">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<style>
+body {
+    counter-reset: tradeCount;
+    text-align: center;
+    font-family: 'Raleway';
+}
+.subform {
+
+}
+button {
+    position: absolute;
+    font-family: 'Raleway';
+}
+.dummy {
+    visibility: hidden;
+}
+.innerForm {
+
+}
+.innerform::before {
+    counter-increment: tradeCount;
+}
+</style>
+</head>
+<body>
+
+<div id="top"></div>
+<h1>🦉 Login to Neo-Owls 🦉</h1>
+<br>
+<div class = "loginform" id = "loginform">
+<form action="/action_page.php" method="post">
+    🦉 Username: <input type="text" name="user" required><br>
+    🦉 Password: <input type="password" name="password" required><br>
+    <input id="loginbutton" class="dummy" type="button" value="Log In"/> 
+</form>
+<br>
+<a href="">forgot your password?</a>
+<br>
+</div>
+<br>
+
+<script>
+function submit() {
+
+}
+function addForm() {
+    var frm = document.createElement("innerform");
+    frm.classList.add('innerform')
+    frm.innerHTML += '<br>'
+    frm.innerHTML += '<form action="/action_page.php" method="post">'
+    frm.innerHTML += 'U: <input type="text" name="username" required><br>'
+    frm.innerHTML += 'S: <input type="text" name="sent" required><br>'
+    frm.innerHTML += 'R: <input type="text" name="received" required><br>'
+    frm.innerHTML += 'N: <input type="text" name="notes"><br>'
+    frm.innerHTML += 'D: <input type="date" name="date" required> '
+    frm.innerHTML += '<input id="x" type="button" value="x"/> '
+    frm.innerHTML += '<input id="plus" type="button" value="+" onclick="addForm()"/><br>'
+    frm.innerHTML += '</form><br>'
+
+    //document.getElementById("subform").appendChild(frm)
+    return frm
+}
+function countForms() {
+    const forms = document.getElementsByClassName("innerform")
+    return forms.length
+}
+</script>
+
+<script>
+$(document).ready(function() {
+    document.onmousedown = mouseDown;
+    function mouseDown(e) {
+        var element =  document.elementFromPoint(e.clientX,e.clientY);
+        //console.log("Clicked element is:" + element.tagName);
+        //console.log(element.parentElement.tagName)
+        //console.log("Index: " + $(element).index());
+        if (element.id == "x") {
+            element.parentElement.remove();
+        }
+        else if (element.id == "plus") {
+            var frm = addForm();
+            element.parentNode.parentNode.insertBefore(frm, element.parentNode.nextSibling);
+        }
+    }
+});
+</script>
+
+</body>
+</html>
