@@ -60,6 +60,10 @@ datetime = "*"
 python-dateutil = "*"
 flask-sqlalchemy = "*"
 pdoc3 = "*"
+flask-login = "*"
+bcrypt = "*"
+flask-mail = "*"
+flask-openid = "*"
 
 [dev-packages]
 

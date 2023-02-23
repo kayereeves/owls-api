@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Neo-Owls</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dosis:wght@800&family=Raleway&display=swap" rel="stylesheet">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<style>
+
+* { padding: 0; margin: 0; }
+h1 {
+    padding-top: 75px;
+    white-space:nowrap;
+}
+.errorbox {
+    width: 100px;
+    height: 150px;
+}
+.container { width:450px; overflow:hidden }
+.sidebar { 
+    float:left;
+    background-color: #654321; 
+    color: white; 
+    padding-top: 10px; 
+    height: 100%;
+    width: 250px; 
+    max-width: 250px;
+}
+html, body {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+body {
+    text-align: center;
+    font-family: 'Raleway';
+}
+body > * {
+  flex-shrink: 0;
+}
+.row {
+  display: flex;
+  height: 100%;
+}
+.pwError {
+
+    color: red;
+}
+.lenError {
+
+    color: red;
+}
+.userError {
+
+    color: red;
+}
+.emailError {
+
+    color: red;
+}
+.button {
+    background-color: #654321; 
+    color: white; 
+    padding: 15px 32px; 
+    font-size: 20px; 
+    font-family: 'Raleway';
+}
+.dummy {
+    visibility: hidden;
+}
+form  { 
+    display: table;  
+    margin: auto;
+}
+p     { display: table-row;  }
+label { 
+    display: table-cell; 
+    text-align: left;
+    padding-right: 5px;
+}
+input { display: table-cell; }
+p {
+    white-space:nowrap;
+}
+span { 
+    margin: auto;
+}
+
+</style>
+</head>
+<body>
+<div class="row">
+<div class="container"><div class="sidebar"><span>Welcome to Neo-Owls!<br><br><div class="greeting" id="greeting">Hello, Guest<br><br><a href='/login'>Login</a></div></span></div></div>
+<div class="container" style="padding-left: 100px; width: 500px; max-width: 500px;">
+<h1>🦉 Neo-Owls 🦉</h1>
+<br>
+<div class = "index" id = "index">
+placeholder
+</div>
+</div>
+</div>
+
+<script>
+function getuser() {
+    let xhr = new XMLHttpRequest();
+    xhr.open("GET", "/user_request");
+    xhr.setRequestHeader('Content-type', 'application/json');
+
+    xhr.onload = () => {
+        if (xhr.readyState === xhr.DONE) {
+            if (xhr.status === 200) {
+                console.log(xhr.responseText)
+                if (xhr.responseText === "Guest") {
+                    document.getElementById("greeting").innerHTML = "Hello, " + xhr.responseText + "<br><br><a href='/login'>Login</a><br><a href='/register'>Register</a>";
+                }
+                else {
+                    document.getElementById("greeting").innerHTML = "Hello, " + xhr.responseText + "<br><br><a href='/logout'>Logout</a>";
+                }
+            }
+        }
+    };
+
+    xhr.send();
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  getuser();
+});
+</script>
+</body>
+</html>

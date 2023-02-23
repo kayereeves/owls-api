@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Neo-Owls - Login</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dosis:wght@800&family=Raleway&display=swap" rel="stylesheet">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<style>
+
+* { padding: 0; margin: 0; }
+h1 {
+    padding-top: 75px;
+    white-space:nowrap;
+}
+.errorbox {
+    width: 100px;
+    height: 150px;
+}
+.container { width:450px; overflow:hidden }
+.sidebar { 
+    float:left;
+    background-color: #654321; 
+    color: white; 
+    padding-top: 10px; 
+    height: 100%;
+    width: 250px; 
+    max-width: 250px;
+}
+html, body {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+body {
+    text-align: center;
+    font-family: 'Raleway';
+}
+body > * {
+  flex-shrink: 0;
+}
+.row {
+  display: flex;
+  height: 100%;
+}
+.userError {
+    visibility: hidden;
+    color: red;
+}
+.button {
+    background-color: #654321; 
+    color: white; 
+    padding: 15px 32px; 
+    font-size: 20px; 
+    font-family: 'Raleway';
+}
+.dummy {
+    visibility: hidden;
+}
+form  { 
+    display: table;  
+    margin: auto;
+}
+p     { display: table-row;  }
+label { 
+    display: table-cell; 
+    text-align: left;
+    padding-right: 5px;
+}
+input { display: table-cell; }
+p {
+    white-space:nowrap;
+}
+span { 
+    margin: auto;
+}
+
+</style>
+</head>
+<body>
+<div class="row">
+<div class="container"><div class="sidebar"><span>Welcome to Neo-Owls!<br><br><div class="greeting" id="greeting">Hello, Guest</div></span></div></div>
+<div class="container" style="padding-left: 100px; width: 500px; max-width: 500px;">
+<h1>🦉 Login to Neo-Owls 🦉</h1>
+<br>
+<div class = "logform" id = "logform">
+<form action="/action_page.php" method="post">
+    <p><label for="user">🦉 Username or Email: </label><input type="text" name="user" required></p><br>
+    <p><label for="password">🦉 Password: </label><input type="password" name="password" id="password" required></p><br>
+</form>
+<div id="userError" name="userError" class="userError">unable to log in with the information you provided</div><br><br><br><br><br><br>
+<input id="logButton" type="button" class="button" value="Login!" onclick="login()"/>
+<br><br>
+<a href="">forgot your password?</a></div>
+</div>
+</div>
+
+<script>
+function login() {
+    var frm = document.forms[0];
+    var pw = frm.password.value;
+    var un = frm.user.value;
+
+    document.getElementById("userError").style.visibility = 'hidden';
+
+    let xhr = new XMLHttpRequest();
+
+    xhr.open("POST", "/login_request");
+    xhr.setRequestHeader('Content-type', 'application/json');
+
+    var data = {
+        user: frm.user.value,
+        pass: frm.password.value,
+    };
+
+    xhr.onload = () => {
+        if (xhr.readyState === xhr.DONE) {
+            if (xhr.status === 200) {
+                if (xhr.responseText === "LOGIN_SUCCESS") {
+                    //replace form body with success text and redir
+                    window.location.href = "/";
+                }
+                else if (xhr.responseText === "LOGIN_FAILURE") {
+                    document.getElementById("userError").style.visibility = 'visible';
+                }
+                console.log(xhr.responseText)
+                return xhr.responseText;
+            }
+        }
+    };
+
+    wdata = JSON.stringify(data);
+    //console.log(wdata);
+    xhr.send(wdata);
+}
+
+//for checking if an input user id is email address
+function isValidEmail(email) {
+    if (!email.match(/^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/)) {
+        return false;
+    }
+    return true;
+}
+
+function getuser() {
+    let xhr = new XMLHttpRequest();
+    xhr.open("GET", "/user_request");
+    xhr.setRequestHeader('Content-type', 'application/json');
+
+    xhr.onload = () => {
+        if (xhr.readyState === xhr.DONE) {
+            if (xhr.status === 200) {
+                console.log(xhr.responseText)
+                if (xhr.responseText === "Guest") {
+                    document.getElementById("greeting").innerHTML = "Hello, " + xhr.responseText + "<br><br><a href='/login'>Login</a><br><a href='/register'>Register</a>";
+                }
+                else {
+                    document.getElementById("greeting").innerHTML = "Hello, " + xhr.responseText + "<br><br><a href='/logout'>Logout</a>";
+                }
+            }
+        }
+    };
+
+    xhr.send();
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  getuser();
+});
+</script>
+</body>
+</html>

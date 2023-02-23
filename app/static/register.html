@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Neo-Owls - Register</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dosis:wght@800&family=Raleway&display=swap" rel="stylesheet">
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.1/jquery.min.js"></script>
+<style>
+
+* { padding: 0; margin: 0; }
+h1 {
+    padding-top: 75px;
+    white-space:nowrap;
+}
+.errorbox {
+    width: 100px;
+    height: 150px;
+}
+.container { width:450px; overflow:hidden }
+.sidebar { 
+    float:left;
+    background-color: #654321; 
+    color: white; 
+    padding-top: 10px; 
+    height: 100%;
+    width: 250px; 
+    max-width: 250px;
+}
+html, body {
+  height: 100%;
+  display: flex;
+  flex-direction: row;
+  overflow: hidden;
+}
+body {
+    text-align: center;
+    font-family: 'Raleway';
+}
+body > * {
+  flex-shrink: 0;
+}
+.row {
+  display: flex;
+  height: 100%;
+}
+.pwError {
+    visibility: hidden;
+    color: red;
+}
+.lenError {
+    visibility: hidden;
+    color: red;
+}
+.userError {
+    visibility: hidden;
+    color: red;
+}
+.emailError {
+    visibility: hidden;
+    color: red;
+}
+.button {
+    background-color: #654321; 
+    color: white; 
+    padding: 15px 32px; 
+    font-size: 20px; 
+    font-family: 'Raleway';
+}
+.dummy {
+    visibility: hidden;
+}
+form  { 
+    display: table;  
+    margin: auto;
+}
+p     { display: table-row;  }
+label { 
+    display: table-cell; 
+    text-align: left;
+    padding-right: 5px;
+}
+input { display: table-cell; }
+p {
+    white-space:nowrap;
+}
+span { 
+    margin: auto;
+}
+
+</style>
+</head>
+<body>
+<div class="row">
+<div class="container"><div class="sidebar"><span>Welcome to Neo-Owls!<br><br><div class="greeting" id="greeting">Hello, Guest</div></span></div></div>
+<div class="container" style="padding-left: 100px; width: 500px; max-width: 500px;">
+<h1>🦉 Neo-Owls Registration 🦉</h1>
+<br>
+<div class = "regform" id = "regform">
+<form action="/action_page.php" method="post">
+    <p><label for="user">🦉 Username: </label><input type="text" name="user" required></p><br>
+    <p><label for="password">🦉 Password: </label><input type="password" name="password" id="password" required></p><br>
+    <p><label for="password2">🦉 Re-Type Password: </label><input type="password" name="password2" id="password2" required></p><br>
+    <p><label for="email">🦉 Email Address: </label><input type="text" name="email" required></p><br>
+</form>
+<div id="pwError" name="pwError" class="pwError">-passwords do not match</div>
+<div id="lenError" name="lenError" class="lenError">-username must be 1-20 chars (A-Z, 0-9, _) & pw must be 8-20 chars</div>
+<div id="emailError" name="emailError" class="emailError">-invalid email format</div>
+<div id="userError" name="userError" class="userError">-username/email already in use</div><br>
+<input id="regButton" type="button" class="button" value="Register!" onclick="register()"/>
+<br><br>
+<a href="">forgot your password?</a></div>
+</div>
+</div>
+
+<script>
+function register() {
+    var frm = document.forms[0];
+    var pw1 = frm.password.value;
+    var pw2 = frm.password2.value;
+    var un = frm.user.value;
+    var email = frm.email.value;
+    document.getElementById("pwError").style.visibility = 'hidden';
+    document.getElementById("lenError").style.visibility = 'hidden';
+    document.getElementById("userError").style.visibility = 'hidden';
+    document.getElementById("emailError").style.visibility = 'hidden';
+
+    if (pw1 != pw2 || !isValidPw(pw1) || !isValidUser(un) || !isValidEmail(email)) {
+        if (!isValidPw(pw1) || !isValidUser(un)) {
+            document.getElementById("lenError").style.visibility = 'visible';
+        }
+        if (pw1 != pw2) {
+            document.getElementById("pwError").style.visibility = 'visible';
+        }
+        if (!isValidEmail(email)) {
+            document.getElementById("emailError").style.visibility = 'visible';
+        }
+        return;
+    }
+
+    let xhr = new XMLHttpRequest();
+    xhr.open("POST", "/register_request");
+    xhr.setRequestHeader('Content-type', 'application/json');
+
+    var data = {
+        user: frm.user.value,
+        pass: frm.password.value,
+        email: frm.email.value
+    };
+
+    xhr.onload = () => {
+        if (xhr.readyState === xhr.DONE) {
+            if (xhr.status === 200) {
+                if (xhr.responseText === "REGISTER_SUCCESS") {
+                    //replace form body with success text and redir
+                    window.location.href = "/";
+                }
+                else if (xhr.responseText === "REGISTER_FAIL: EXISTING USER") {
+                    document.getElementById("userError").style.visibility = 'visible';
+                }
+                return xhr.responseText;
+            }
+        }
+    };
+
+    wdata = JSON.stringify(data);
+    //console.log(wdata);
+    xhr.send(wdata);
+}
+
+function isValidPw(pw) {
+    if (pw.length > 20 || pw.length < 8) {
+        return false;
+    }
+    return true;
+}
+
+function isValidUser(un) {
+    if (un.length > 20 || un.length < 1) {
+        return false;
+    }
+    else if (!un.match(/^[0-9A-Za-z_]+$/)) {
+        return false;
+    }
+    return true;
+}
+
+function isValidEmail(email) {
+    if (!email.match(/^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})$/)) {
+        return false;
+    }
+    return true;
+}
+</script>
+</body>
+</html>

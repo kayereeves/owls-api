@@ -3,24 +3,53 @@
 #https://www.nintyzeros.com/2019/11/flask-mysql-crud-restful-api.html
 
 import json
+import os
 import re
 import pandas as pd
 import dateutil
 import hashlib
-from flask import Flask, request, jsonify, make_response, current_app, abort
+import bcrypt
+from flask import Flask, request, jsonify, make_response, current_app, abort, session, send_from_directory
+from flask.sessions import SecureCookieSessionInterface
+from flask_login import *
 from flask_sqlalchemy import SQLAlchemy
+from flask_openid import OpenID
 from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 from marshmallow import fields
 from flask_cors import CORS
 from datetime import datetime
+from .user import User
+from .secret import SECRET_KEY, DB_USER, DB_PASS, DB_URL
 
+#init app
 app = Flask(__name__)
+
+@app.route('/favicon.ico')
+def favicon():
+    return send_from_directory(os.path.join(app.root_path, 'static'),
+        'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
+#init login manager
+app.secret_key = SECRET_KEY
+login_manager = LoginManager()
+login_manager.init_app(app)
+session_cookie = SecureCookieSessionInterface().get_signing_serializer(app)
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.get_id(user_id)
+
+#allow CORS
 CORS(app)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://owls:vHAxYRzjZYSEr6E@owls-db.c9hvuhvpnktp.us-west-2.rds.amazonaws.com/owls'
+
+#init database connection
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://' + DB_USER + ':' + DB_PASS + '@' + DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 db = SQLAlchemy(app)
+#oid = OpenID(app, db, safe_roots=[])
 
-###Models####
+#Models and Schema
+#Transaction
 class _Transaction(db.Model):
     __tablename__ = "transactions"
     loaded_at = db.Column(db.Date)
@@ -45,6 +74,22 @@ class _Transaction(db.Model):
         self.ds = ds
         self.notes = notes
 
+class _TransactionSchema(SQLAlchemyAutoSchema):
+    class _Meta(SQLAlchemyAutoSchema.Meta):
+        model = _Transaction
+        sqla_session = db.session
+        include_relationships = True
+        load_instance = True
+    loaded_at = fields.String(required=False)
+    transaction_id = fields.String(dump_only=True, required=False)
+    user_id = fields.String(required=False)
+    traded = fields.String(required=True)
+    traded_for = fields.String(required=True)
+    ds = fields.String(required=False)
+    notes = fields.String(required=False)
+
+#Models and Schema
+#ItemData
 class _ItemData(db.Model):
     __tablename__ = "itemdata"
     name = db.Column('Item', db.String(70))
@@ -73,41 +118,6 @@ class _ItemData(db.Model):
         self.date_of_last_update = date_of_last_update
         self.api_name = api_name
 
-class _Terms(db.Model):
-    __tablename__ = "terms_users"
-    user_id = db.Column(db.String(255), primary_key=True)
-
-    def create(self):
-        db.session.add(self)
-        db.session.commit()
-        return self
-
-    def __init__(self, user_id):
-        self.user_id = user_id
-
-class _UserData(db.Model):
-    __tablename__ = "userdata"
-    username = db.Column(db.String(20), primary_key=True)
-    hash = db.Column(db.String(20))
-    email = db.Column(db.String(50))
-    isAdmin = db.Column(db.Boolean)
-
-db.create_all()
-
-class _TransactionSchema(SQLAlchemyAutoSchema):
-    class _Meta(SQLAlchemyAutoSchema.Meta):
-        model = _Transaction
-        sqla_session = db.session
-        include_relationships = True
-        load_instance = True
-    loaded_at = fields.String(required=False)
-    transaction_id = fields.String(dump_only=True, required=False)
-    user_id = fields.String(required=False)
-    traded = fields.String(required=True)
-    traded_for = fields.String(required=True)
-    ds = fields.String(required=False)
-    notes = fields.String(required=False)
-
 class _ItemDataSchema(SQLAlchemyAutoSchema):
     class _Meta(SQLAlchemyAutoSchema.Meta):
         model = _ItemData
@@ -122,6 +132,20 @@ class _ItemDataSchema(SQLAlchemyAutoSchema):
     date_of_last_update = fields.String(required=False)
     api_name = fields.String(required=True)
 
+#Models and Schema
+#Terms
+class _Terms(db.Model):
+    __tablename__ = "terms_users"
+    user_id = db.Column(db.String(255), primary_key=True)
+
+    def create(self):
+        db.session.add(self)
+        db.session.commit()
+        return self
+
+    def __init__(self, user_id):
+        self.user_id = user_id
+
 class _TermsSchema(SQLAlchemyAutoSchema):
     class _Meta(SQLAlchemyAutoSchema.Meta):
         model = _Terms
@@ -129,6 +153,26 @@ class _TermsSchema(SQLAlchemyAutoSchema):
         include_relationships = True
         load_instance = True
     user_id = fields.String(required=False)
+
+#Models and Schema
+#UserData
+class _UserData(db.Model):
+    __tablename__ = "userdata"
+    username = db.Column(db.String(20), primary_key=True)
+    hash = db.Column(db.String(60))
+    email = db.Column(db.String(50))
+    isAdmin = db.Column(db.Boolean)
+
+    def create(self):
+        db.session.add(self)
+        db.session.commit()
+        return self
+
+    def __init__(self, username, hash, email, isAdmin):
+        self.username = username
+        self.hash = hash
+        self.email = email
+        self.isAdmin = isAdmin
 
 class _UserDataSchema(SQLAlchemyAutoSchema):
     class _Meta(SQLAlchemyAutoSchema.Meta):
@@ -141,9 +185,12 @@ class _UserDataSchema(SQLAlchemyAutoSchema):
     email = fields.String(required=True)
     isAdmin = fields.Boolean(required=True)
 
+db.create_all()
+
+#routes
 @app.route('/', methods = ['GET'])
-def _index():
-    return current_app.send_static_file('static/app/main.html')
+def index():
+    return current_app.send_static_file('index.html')
 
 """
 Submit a trade to the database.
@@ -281,10 +328,82 @@ def terms_add(user):
 
     return user
 
-#@app.route('/validate_name/<string:user>', methods = ['GET'])
-#def add_user(user):
-    #get_user =
-
 #adds a new user to the database
-#@app.route('/add_user/<string:user>', methods = ['GET', 'POST'])
-#def add_user(user):
+@app.route('/register', methods = ['GET'])
+def register():
+    return current_app.send_static_file('register.html')
+
+@app.route('/register_request', methods = ['GET', 'POST'])
+def register_request():
+    data = request.get_json()
+
+    if not (_UserData.query.get(data['user']) or _UserData.query.filter_by(email=data['email']).first()):
+        hashed = bcrypt.hashpw(data['pass'].encode('utf8'), bcrypt.gensalt())
+        new_user = _UserData(username=data['user'], hash=hashed, email=data['email'], isAdmin=False)
+        db.session.add(new_user)
+        db.session.commit()
+        #log the new user in
+        session['username'] = data['user']
+        return "REGISTER_SUCCESS"
+    
+    return "REGISTER_FAIL: EXISTING USER"
+
+#logs an existing user in
+@app.route('/login', methods = ['GET'])
+def login_page():
+    return current_app.send_static_file('login.html')
+
+@app.route('/login_request', methods = ['GET', 'POST'])
+def login_request():
+    data = request.get_json()
+    user_data = _UserData.query.get(data['user'])
+
+    if bcrypt.checkpw(data['pass'].encode('utf8'), user_data.__dict__['hash'].encode('utf8')):
+        #log in
+        session['username'] = data['user']
+        print(session['username'])
+        print("LOGIN_SUCCESS")
+        return "LOGIN_SUCCESS"
+
+    #generate failure message
+    return "LOGIN_FAILURE"
+
+@app.route('/login_request_email', methods = ['GET', 'POST'])
+def login_request_email():
+    data = request.get_json()
+    user_data = _UserData.query.filter_by(email=data['user']).first()
+
+    if bcrypt.checkpw(data['pass'].encode('utf8'), user_data.__dict__['hash'].encode('utf8')):
+        #log in
+        session['username'] = user_data['username']
+        print("LOGIN_SUCCESS")
+        return "LOGIN_SUCCESS"
+
+    #generate failure message
+    return "LOGIN_FAILURE"
+
+#form that allows a user to reset their password
+@app.route('/login_help', methods = ['GET'])
+def login_help():
+    return current_app.send_static_file('login_help.html')
+
+#form that allows a user to reset their password
+@app.route('/login_help_request', methods = ['GET', 'POST'])
+def login_help_request():
+    data = request.get_json()
+    user_data = _UserData.query.get(data['user'])
+    email = user_data['email']
+    #send an email allowing user to reset their password
+
+@app.route('/logout')
+def logout():
+    # remove the username from the session if it's there
+    session.pop('username', None)
+    return current_app.send_static_file('index.html')
+
+@app.route('/user_request')
+def getCurrentUser():
+    if 'username' in session.keys():
+        return session['username']
+
+    return 'Guest'
