@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap.min.css" integrity="sha384-HSMxcRTRxnN+Bdg0JdbxYKrThecOKuH5zCYotlSAcp1+c8xmyTe9GYg1l9a69psu" crossorigin="anonymous">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.4.1/dist/css/bootstrap-theme.min.css" integrity="sha384-6pzBo3FDv/PJ8r2KRkGHifhEocL+1X2rVCTTkUfGk7/0pbek5mMa1upzvWbrUbOZ" crossorigin="anonymous">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
     <title>Neo-Owls - Register</title>
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -22,7 +30,9 @@ h1 {
 .sidebar { 
     float:left;
     background-color: #654321; 
-    color: white; 
+    border-bottom-right-radius: 20px;
+    border-top-right-radius: 20px;
+    color: beige; 
     padding-top: 10px; 
     height: 100%;
     width: 250px; 
@@ -33,6 +43,7 @@ html, body {
   display: flex;
   flex-direction: row;
   overflow: hidden;
+  color: #654321;
 }
 body {
     text-align: center;
@@ -63,10 +74,10 @@ body > * {
 }
 .button {
     background-color: #654321; 
-    color: white; 
-    padding: 15px 32px; 
-    font-size: 20px; 
+    color: beige; 
+    padding: 8px 16px; 
     font-family: 'Raleway';
+    border-radius: 20px;
 }
 .dummy {
     visibility: hidden;
@@ -88,14 +99,44 @@ p {
 span { 
     margin: auto;
 }
+ul {
+    display: inline;
+}
+li {
+    font-size: 14px;
+    margin-left: 100px;
+    text-align: left;
+    list-style-type: circle;
+}
+a {
+    color:beige;
+    text-decoration: underline;
+}
+a:hover {
+    color:white;
+}
 
 </style>
 </head>
 <body>
 <div class="row">
-<div class="container"><div class="sidebar"><span>Welcome to Neo-Owls!<br><br><div class="greeting" id="greeting">Hello, Guest</div></span></div></div>
+    <div class="container"><div class="sidebar">
+        <span>Welcome to Neo-Owls!<br><br>
+        <div class="greeting" id="greeting">Hello, Guest<br><a href='/login'>Login</a> or <a href='/register'>Register</a></div><br>
+        <ul>
+        <li><a href='/'>Profile</a></li>
+        <li><a href='/'>My Lists</a></li>
+        <li><a href='/'>Trading Log</a></li>
+        <li><a href='/'>Value Guide</a></li>
+        <li><a href='https://greasyfork.org/en/scripts/449538-neopets-owls-pricer'>Userscript</a></li>
+        <li><a href='https://discord.gg/e9DQfA4E77'>Discord</a></li>
+        <li><a href='/'>FAQ</a></li>
+        </ul><br><br>
+        Search Database:<br>
+        <form><input type ="text" id="search"><br><input id="seaButton" type="button" class="button" value="Go!" onclick="search()"/></form>
+        </span></div></div>
 <div class="container" style="padding-left: 100px; width: 500px; max-width: 500px;">
-<h1>🦉 Neo-Owls Registration 🦉</h1>
+<h1>🦉 Register 🦉</h1>
 <br>
 <div class = "regform" id = "regform">
 <form action="/action_page.php" method="post">
@@ -110,13 +151,13 @@ span {
 <div id="userError" name="userError" class="userError">-username/email already in use</div><br>
 <input id="regButton" type="button" class="button" value="Register!" onclick="register()"/>
 <br><br>
-<a href="">forgot your password?</a></div>
+<a href="" style="color:#654321;">forgot your password?</a></div>
 </div>
 </div>
 
 <script>
 function register() {
-    var frm = document.forms[0];
+    var frm = document.forms[1];
     var pw1 = frm.password.value;
     var pw2 = frm.password2.value;
     var un = frm.user.value;
@@ -192,6 +233,32 @@ function isValidEmail(email) {
     }
     return true;
 }
+
+function getuser() {
+    let xhr = new XMLHttpRequest();
+    xhr.open("GET", "/user_request");
+    xhr.setRequestHeader('Content-type', 'application/json');
+
+    xhr.onload = () => {
+        if (xhr.readyState === xhr.DONE) {
+            if (xhr.status === 200) {
+                console.log(xhr.responseText)
+                if (xhr.responseText === "Guest") {
+                    document.getElementById("greeting").innerHTML = "Hello, " + xhr.responseText + "<br><a href='/login'>Login</a> or <a href='/register'>Register</a>";
+                }
+                else {
+                    document.getElementById("greeting").innerHTML = "Hello, " + xhr.responseText + "<br><a href='/logout'>Logout</a>";
+                }
+            }
+        }
+    };
+
+    xhr.send();
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  getuser();
+});
 </script>
 </body>
 </html>

@@ -2,6 +2,7 @@
 #https://www.bogotobogo.com/python/python-REST-API-Http-Requests-for-Humans-with-Flask.php
 #https://www.nintyzeros.com/2019/11/flask-mysql-crud-restful-api.html
 
+from __future__ import print_function
 import json
 import os
 import re
@@ -9,6 +10,13 @@ import pandas as pd
 import dateutil
 import hashlib
 import bcrypt
+import os.path
+import google.auth
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from flask import Flask, request, jsonify, make_response, current_app, abort, session, send_from_directory
 from flask.sessions import SecureCookieSessionInterface
 from flask_login import *
@@ -18,7 +26,6 @@ from marshmallow_sqlalchemy import SQLAlchemyAutoSchema, auto_field
 from marshmallow import fields
 from flask_cors import CORS
 from datetime import datetime
-from .user import User
 from .secret import SECRET_KEY, DB_USER, DB_PASS, DB_URL
 
 #init app
@@ -34,10 +41,6 @@ app.secret_key = SECRET_KEY
 login_manager = LoginManager()
 login_manager.init_app(app)
 session_cookie = SecureCookieSessionInterface().get_signing_serializer(app)
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.get_id(user_id)
 
 #allow CORS
 CORS(app)
@@ -187,6 +190,152 @@ class _UserDataSchema(SQLAlchemyAutoSchema):
 
 db.create_all()
 
+"""
+Retrieve ~Owls guide value for an item by name.
+
+/new
+"""
+def get_new():
+    get_transactions = _Transaction.query.filter(_Transaction.loaded_at == "2099-09-09").all()
+    transaction_schema = _TransactionSchema(many=True)
+    transaction = transaction_schema.dump(get_transactions)
+    print(transaction)
+    resultList = []
+
+    print(transaction)
+    for i in range(0, len(transaction)):
+            resultList.append(transaction[i])
+    print(resultList)
+    return resultList
+
+#returns the # of first empty row in the google spreadsheet
+def gs_empty_row():
+    firstempty = 1
+
+    SCOPES = ['https://www.googleapis.com/auth/drive']
+    SPREADSHEET_ID = '1tgzdVdFzlUt6f7kR8K7X3MXPjLF2Dnwz9I6DZgghyXI'
+    SHEET_NAME = 'Board Data Records!B:E'
+
+    
+    #print(list[0]['notes'])
+
+    """Shows basic usage of the Sheets API.
+    Prints values from a sample spreadsheet.
+    """
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+
+    try:
+        service = build('sheets', 'v4', credentials=creds)
+
+        # Call the Sheets API
+        sheet = service.spreadsheets()
+        result = sheet.values().get(spreadsheetId=SPREADSHEET_ID,
+                                    range=SHEET_NAME).execute()
+        values = result.get('values', [])
+
+        if not values:
+            print('No data found.')
+            return
+
+        i = 0
+
+        for row in values:
+            i += 1
+            if not row:
+                firstempty = i
+                break
+
+    except HttpError as err:
+        print(err)
+
+    return firstempty
+
+#todo: fix primary key stuff...
+def import_bot_data():
+    empty_row = gs_empty_row()
+    SCOPES = ['https://www.googleapis.com/auth/drive']
+    SPREADSHEET_ID = '1tgzdVdFzlUt6f7kR8K7X3MXPjLF2Dnwz9I6DZgghyXI'
+    SHEET_NAME = 'Board Data Records!B' + str(empty_row) + ':H' + str(empty_row)
+
+    creds = None
+    # The file token.json stores the user's access and refresh tokens, and is
+    # created automatically when the authorization flow completes for the first
+    # time.
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    # If there are no (valid) credentials available, let the user log in.
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        # Save the credentials for the next run
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+
+    list = get_new()
+
+    if len(list) > 0:
+        try:
+            service = build('sheets', 'v4', credentials=creds)
+            print(len(list))
+
+            for i in range(0, len(list)):
+                values = [
+                    [
+                        list[i]['user_id'], list[i]['traded'],
+                        list[i]['traded_for'], list[i]['ds'],
+                        list[i]['notes']
+                    ]
+                ]
+                body = {
+                    'values': values
+                }
+                service.spreadsheets().values().append(
+                    spreadsheetId=SPREADSHEET_ID, range=SHEET_NAME,
+                    valueInputOption='USER_ENTERED', body=body).execute()
+                
+                values = [
+                    [
+                        "", ""
+                        "", ""
+                        ""
+                    ]
+                ]
+                body = {
+                    'values': values
+                }
+                service.spreadsheets().values().append(
+                    spreadsheetId=SPREADSHEET_ID, range=SHEET_NAME,
+                    valueInputOption='USER_ENTERED', body=body).execute()
+                
+                empty_row += 1
+                SHEET_NAME = 'Board Data Records!B' + str(empty_row) + ':H' + str(empty_row)
+                
+        except HttpError as error:
+            print(f"An error occurred: {error}")
+
+gs_empty_row()
+import_bot_data()
+
 #routes
 @app.route('/', methods = ['GET'])
 def index():
@@ -328,12 +477,19 @@ def terms_add(user):
 
     return user
 
+"""
+OwlBot Thumbnail Dispenser
+"""
+@app.route('/images/bot_thumb', methods = ['GET'])
+def bot_thumb():
+    return current_app.send_static_file('owls_thumb.png')
+
 #adds a new user to the database
-@app.route('/register', methods = ['GET'])
+#@app.route('/register', methods = ['GET'])
 def register():
     return current_app.send_static_file('register.html')
 
-@app.route('/register_request', methods = ['GET', 'POST'])
+#@app.route('/register_request', methods = ['GET', 'POST'])
 def register_request():
     data = request.get_json()
 
@@ -349,11 +505,11 @@ def register_request():
     return "REGISTER_FAIL: EXISTING USER"
 
 #logs an existing user in
-@app.route('/login', methods = ['GET'])
+#@app.route('/login', methods = ['GET'])
 def login_page():
     return current_app.send_static_file('login.html')
 
-@app.route('/login_request', methods = ['GET', 'POST'])
+#@app.route('/login_request', methods = ['GET', 'POST'])
 def login_request():
     data = request.get_json()
     user_data = _UserData.query.get(data['user'])
@@ -368,7 +524,7 @@ def login_request():
     #generate failure message
     return "LOGIN_FAILURE"
 
-@app.route('/login_request_email', methods = ['GET', 'POST'])
+#@app.route('/login_request_email', methods = ['GET', 'POST'])
 def login_request_email():
     data = request.get_json()
     user_data = _UserData.query.filter_by(email=data['user']).first()
@@ -383,27 +539,29 @@ def login_request_email():
     return "LOGIN_FAILURE"
 
 #form that allows a user to reset their password
-@app.route('/login_help', methods = ['GET'])
+#@app.route('/login_help', methods = ['GET'])
 def login_help():
     return current_app.send_static_file('login_help.html')
 
 #form that allows a user to reset their password
-@app.route('/login_help_request', methods = ['GET', 'POST'])
+#@app.route('/login_help_request', methods = ['GET', 'POST'])
 def login_help_request():
     data = request.get_json()
     user_data = _UserData.query.get(data['user'])
     email = user_data['email']
     #send an email allowing user to reset their password
 
-@app.route('/logout')
+#@app.route('/logout')
 def logout():
     # remove the username from the session if it's there
     session.pop('username', None)
     return current_app.send_static_file('index.html')
 
-@app.route('/user_request')
+#@app.route('/user_request')
 def getCurrentUser():
     if 'username' in session.keys():
         return session['username']
 
     return 'Guest'
+
+
