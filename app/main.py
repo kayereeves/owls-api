@@ -282,6 +282,55 @@ def get_owls_value(item):
         return make_response(jsonify({"owls_value": itemdata['owls_value'], "last_updated": itemdata['date_of_last_update']}))
     else:
         abort(404)
+"""
+Retrieve ~Owls guide value and trade data for an item by name.
+
+/itemdata/profile/<string:item>
+"""
+@app.route('/itemdata/profile/<string:item>', methods = ['GET'])
+def get_item_profile(item):
+    item = item.casefold()
+    get_itemdata = _ItemData.query.get(item)
+    
+    if (get_itemdata):
+        itemdata_schema = _ItemDataSchema()
+        itemdata = itemdata_schema.dump(get_itemdata)
+
+        start = request.args.get('start', default='1900-01-01', type=str)
+        end = request.args.get('end', default='2100-01-01', type=str)
+        #todo: write new regex
+        regex = ".* \+ " + item + " (.*) \+ .*|" + item + " (.*).*|" + ".* \+ " + item + " (.*)"
+
+        get_transactions = _Transaction.query.all()
+        transaction_schema = _TransactionSchema(many=True)
+        transaction = transaction_schema.dump(get_transactions)
+        trades = []
+
+        for i,q in enumerate(transaction):
+            transaction_str = ''
+
+           # if item in q['traded'].casefold():
+            if re.match(regex, q['traded'].casefold()):
+                transaction_str = q['traded']
+            if re.match(regex, q['traded_for'].casefold()):
+                transaction_str = q['traded_for']
+
+            if len(transaction_str) > 0:
+                del transaction[i]['user_id'] 
+                del transaction[i]['transaction_id']
+                del transaction[i]['loaded_at']
+                trades.append(transaction[i])
+
+        trades.reverse()
+
+        #limit to 20 results?
+        print(itemdata['owls_value'])
+        print(itemdata['date_of_last_update'])
+        print(len(trades))
+
+        return make_response(jsonify({"guide_value": itemdata['owls_value'], "last_updated": itemdata['date_of_last_update'], "trade_reports": trades}))
+    else:
+        abort(404)
 
 """
 Retrieve all item name and value pairs in format expected by the ~Owls userscript.
