@@ -27,12 +27,15 @@ from marshmallow import fields
 from flask_cors import CORS
 from datetime import datetime
 from .secret import SECRET_KEY, DB_USER, DB_PASS, DB_URL
+
 #init app
 app = Flask(__name__)
+
 @app.route('/favicon.ico')
 def favicon():
     return send_from_directory(os.path.join(app.root_path, 'static'),
         'favicon.ico', mimetype='image/vnd.microsoft.icon')
+
 #init login manager
 app.secret_key = SECRET_KEY
 login_manager = LoginManager()
@@ -166,7 +169,10 @@ class _UserDataSchema(SQLAlchemyAutoSchema):
     hash = fields.String(required=True)
     email = fields.String(required=True)
     isAdmin = fields.Boolean(required=True)
-db.create_all()
+
+with app.app_context():
+    db.create_all()
+    
 #routes
 @app.route('/', methods = ['GET'])
 def index():
