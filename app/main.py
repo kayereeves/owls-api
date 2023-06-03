@@ -338,14 +338,14 @@ def terms_add(user):
 """
 OwlBot Thumbnail Dispenser
 """
-@app.route('/images/bot_thumb', methods = ['GET'])
+@app.route('/images/bot_thumb.png', methods = ['GET'])
 def bot_thumb():
     return current_app.send_static_file('owls_thumb.png')
 
 """
 OwlBot Rainbow Thumbnail Dispenser
 """
-@app.route('/images/bot_thumb_pride', methods = ['GET'])
+@app.route('/images/bot_thumb_pride.png', methods = ['GET'])
 def bot_thumb_pride():
     return current_app.send_static_file('owls_thumb_rainbow.png')
 
