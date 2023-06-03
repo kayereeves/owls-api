@@ -341,6 +341,14 @@ OwlBot Thumbnail Dispenser
 @app.route('/images/bot_thumb', methods = ['GET'])
 def bot_thumb():
     return current_app.send_static_file('owls_thumb.png')
+
+"""
+OwlBot Rainbow Thumbnail Dispenser
+"""
+@app.route('/images/bot_thumb_rainbow', methods = ['GET'])
+def bot_thumb():
+    return current_app.send_static_file('owls_thumb_rainbow.png')
+
 #adds a new user to the database
 #@app.route('/register', methods = ['GET'])
 def register():
