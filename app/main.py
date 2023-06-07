@@ -249,6 +249,19 @@ def get_owls_value(item):
         return make_response(jsonify({"owls_value": itemdata['owls_value'], "last_updated": itemdata['date_of_last_update']}))
     else:
         abort(404)
+
+#key for sorting by date
+def datesort_helper(data):
+    if len(data) == 3:
+        split_date = data['date_of_last_update'].split('-')
+    else:
+        split_date = data['ds'].split('-')
+
+    if len(split_date) == 3:
+        return split_date[0], split_date[1], split_date[2]
+    else:
+        return '0000', '00', '00'
+
 """
 Retrieve ~Owls guide value and trade data for an item by name.
 /itemdata/profile/<string:item>
@@ -287,16 +300,37 @@ def get_item_profile(item):
                 del transaction[i]['loaded_at']
                 trades.append(transaction[i])
 
+        trades.sort(key=datesort_helper)
         trades.reverse()
 
-        #limit to 20 results?
-        print(itemdata['owls_value'])
-        print(itemdata['date_of_last_update'])
-        print(len(trades))
-
-        return make_response(jsonify({"guide_value": itemdata['owls_value'], "last_updated": itemdata['date_of_last_update'], "trade_reports": trades}))
+        return make_response(jsonify({"guide_value": itemdata['owls_value'], "last_updated": itemdata['date_of_last_update'], "trade_reports": trades[:20]}))
     else:
         abort(404)
+
+"""
+Retrieve 20 most recently updated values on ~Owls.
+/recent_updates/
+"""
+@app.route('/recent_updates/', methods = ['GET'])
+def get_recent_updates():
+    get_itemdata = _ItemData.query.all()
+    itemdata_schema = _ItemDataSchema(many=True)
+    itemdata = itemdata_schema.dump(get_itemdata)
+    items = []
+
+    for i,q in enumerate(itemdata):
+        del itemdata[i]['name']
+        del itemdata[i]['retirement']
+        del itemdata[i]['release_type']
+        del itemdata[i]['num_reports']
+        del itemdata[i]['values_reported']
+        del itemdata[i]['old_reports']
+        items.append(itemdata[i])
+
+    items.sort(key=datesort_helper)
+    items.reverse()
+
+    return make_response(jsonify({"recent_updates": items[:20]}))
 
 """
 Retrieve all item name and value pairs in format expected by the ~Owls userscript.
