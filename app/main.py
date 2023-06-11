@@ -196,44 +196,7 @@ def submit_trade():
     #result = transaction_schema.dump(t)
     result = data
     return make_response(jsonify({"transaction": result}),200)
-"""
-Return data for trades containing an item by name.
-/transactions/<string:item>
-"""
-#user_id is deliberately omitted from result
-@app.route('/transactions/<string:item>', methods = ['GET'])
-def get_by_item(item):
-    start = request.args.get('start', default='1900-01-01', type=str)
-    end = request.args.get('end', default='2100-01-01', type=str)
-    item = item.casefold()
-    get_transactions = _Transaction.query.all()
-    transaction_schema = _TransactionSchema(many=True)
-    transaction = transaction_schema.dump(get_transactions)
-    resultList = []
-    for i,q in enumerate(transaction):
-        transaction_str = ''
-        if item in q['traded'].casefold():
-            transaction_str = q['traded'].casefold()
-        elif item in q['traded_for'].casefold():
-            transaction_str = q['traded_for'].casefold()
-        if re.search("Dyeworks .*: ".casefold() + item, transaction_str):
-            pass
-        elif transaction_str == '':
-            pass
-        else:
-            if (transaction[i]['ds'] == '0000-00-00'):
-                transac_date = datetime.strptime(start, '%Y-%m-%d')
-            else:
-                transac_date = datetime.strptime(transaction[i]['ds'], '%Y-%m-%d')
-            
-            start_date = datetime.strptime(start, '%Y-%m-%d')
-            end_date = datetime.strptime(end, '%Y-%m-%d')
-            if transac_date >= start_date and transac_date <= end_date:
-                del transaction[i]['user_id'] 
-                del transaction[i]['transaction_id']
-                del transaction[i]['loaded_at']
-                resultList.append(transaction[i])
-    return make_response(jsonify({"results": resultList}))
+
 """
 Retrieve ~Owls guide value for an item by name.
 /itemdata/<string:item>
@@ -266,6 +229,7 @@ def datesort_helper(data):
 Retrieve ~Owls guide value and trade data for an item by name.
 /itemdata/profile/<string:item>
 """
+#user_id is deliberately omitted from result
 @app.route('/itemdata/profile/<string:item>', methods = ['GET'])
 def get_item_profile(item):
     item = item.casefold()
@@ -277,6 +241,10 @@ def get_item_profile(item):
 
         start = request.args.get('start', default='1900-01-01', type=str)
         end = request.args.get('end', default='2100-01-01', type=str)
+            
+        start_date = datetime.strptime(start, '%Y-%m-%d')
+        end_date = datetime.strptime(end, '%Y-%m-%d')
+        
         #todo: write new regex
         regex = ".* \+ " + item + " (.*) \+ .*|" + item + " (.*).*|" + ".* \+ " + item + " (.*)"
 
@@ -298,7 +266,14 @@ def get_item_profile(item):
                 del transaction[i]['user_id'] 
                 del transaction[i]['transaction_id']
                 del transaction[i]['loaded_at']
-                trades.append(transaction[i])
+
+                if (transaction[i]['ds'] == '0000-00-00'):
+                    transac_date = datetime.strptime('2000-01-01', '%Y-%m-%d')
+                else:
+                    transac_date = datetime.strptime(transaction[i]['ds'], '%Y-%m-%d')
+            
+                if transac_date >= start_date and transac_date <= end_date:
+                    trades.append(transaction[i])
 
         trades.sort(key=datesort_helper)
         trades.reverse()
