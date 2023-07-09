@@ -183,7 +183,7 @@ def bot_terms():
     return current_app.send_static_file('bot_terms.html')
 
 @app.route('/bot_privacy', methods= ['GET'])
-def bot_terms():
+def bot_privacy():
     return current_app.send_static_file('bot_privacy.html')
 
 """
