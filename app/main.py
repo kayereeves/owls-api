@@ -182,6 +182,10 @@ def index():
 def bot_terms():
     return current_app.send_static_file('bot_terms.html')
 
+@app.route('/bot_privacy', methods= ['GET'])
+def bot_terms():
+    return current_app.send_static_file('bot_privacy.html')
+
 """
 Submit a trade to the database.
 Accepts a trade in the format {"loaded_at": "", "user_id": "", "traded": "", "traded_for": "", "ds": "", "notes": ""}
