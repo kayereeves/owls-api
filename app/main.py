@@ -177,6 +177,11 @@ with app.app_context():
 @app.route('/', methods = ['GET'])
 def index():
     return current_app.send_static_file('index.html')
+
+@app.route('/bot_terms', methods= ['GET'])
+def bot_terms():
+    return current_app.send_static_file('bot_terms.html')
+
 """
 Submit a trade to the database.
 Accepts a trade in the format {"loaded_at": "", "user_id": "", "traded": "", "traded_for": "", "ds": "", "notes": ""}
