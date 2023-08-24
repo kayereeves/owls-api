@@ -176,7 +176,7 @@ with app.app_context():
 #routes
 @app.route('/', methods = ['GET'])
 def index():
-    return current_app.send_static_file('index.html')
+    return current_app.send_static_file('full.html')
 
 @app.route('/bot_terms', methods= ['GET'])
 def bot_terms():
